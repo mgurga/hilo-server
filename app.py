@@ -4,7 +4,7 @@ from flask import Flask, request, redirect, abort
 from flask_cors import CORS
 from markupsafe import escape
 
-gamesite = "http://localhost:3000"
+gamesite = "http://localhost:5173"
 app = Flask(__name__)
 CORS(app)
 
@@ -217,8 +217,11 @@ def recents(amt: int):
     allgames = gamedb.all()
     amt = min(len(allgames), amt)
     out = []
-    
-    for i in range(-1, -amt):
+
+    if len(allgames) == 0:
+        return json.dumps([])
+
+    for i in range(-1, -(amt+1), -1):
         out.append(allgames[i])
 
     return json.dumps(out)

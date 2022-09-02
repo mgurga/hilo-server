@@ -1,1 +1,3 @@
 .vercel
+db.json
+__pycache__/
