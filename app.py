@@ -3,11 +3,13 @@ from tinydb import TinyDB, Query, where
 from flask import Flask, request, redirect, abort
 from flask_cors import CORS
 from markupsafe import escape
+from sqlite import Database
 
 gamesite = "http://localhost:5173"
 app = Flask(__name__)
 CORS(app)
 
+# db = Database("db.sqlite")
 db = TinyDB("db.json")
 accdb = db.table("accounts")
 gamedb = db.table("games")
