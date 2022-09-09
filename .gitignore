@@ -1,3 +1,4 @@
 .vercel
 db.json
+db.sqlite
 __pycache__/

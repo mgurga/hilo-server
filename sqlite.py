@@ -12,17 +12,53 @@ class Database:
 
     def __init__(self, dbtype: DBType, filename="db.sqlite"):
         if dbtype == DBType.DISK:
+            print(f"using sqlite backend in disk mode")
             self.con = sqlite3.connect(filename)
         else:
+            print(f"using sqlite backend in memory mode")
             self.con = sqlite3.connect(":memory:")
-
         self.cur = self.con.cursor()
-        self.cur.execute("CREATE TABLE accounts(username, password, datecreated)")
-        self.cur.execute("CREATE TABLE games(creator, id, name, description, datecreated)")
-        self.cur.execute("CREATE TABLE nodes(name, amount, id, parent, datecreated)")
 
-        self.cur.execute("CREATE TABLE hashes(key, value)")
-        self.cur.execute("CREATE TABLE authkeys(key, value)")
+        print(f"sqlite3 version: {sqlite3.version}")
+        print(f"sqlite_version version: {sqlite3.sqlite_version}")
+
+        res = self.cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        res = res.fetchall()
+        if len(res) != 5:
+            self.cur.execute("CREATE TABLE accounts(username, password, datecreated)")
+            self.cur.execute("CREATE TABLE games(creator, id, name, description, datecreated)")
+            self.cur.execute("CREATE TABLE nodes(name, amount, id, parent, datecreated)")
+
+            self.cur.execute("CREATE TABLE hashes(key, value)")
+            self.cur.execute("CREATE TABLE authkeys(key, value)")
+
+    # Misc/Raw operations (DO NOT USE)
+    def all_users(self, order_by="ascending"):
+        order_by = "ASC" if order_by == "ascending" else "DESC"
+        res = self.cur.execute(f"SELECT * FROM accounts ORDER BY datecreated {order_by}")
+        res = res.fetchall()
+        out = []
+        for acc in res:
+            out.append({"username": acc[0], "password": acc[1], "datecreated": float(acc[2])})
+        return out
+
+    def all_games(self, order_by="ascending"):
+        order_by = "ASC" if order_by == "ascending" else "DESC"
+        res = self.cur.execute(f"SELECT * FROM games ORDER BY datecreated {order_by}")
+        res = res.fetchall()
+        out = []
+        for game in res:
+            out.append({"creator": game[0], "id": game[1], "name": game[2], "description": game[3], "datecreated": float(game[4])})
+        return out
+
+    def all_nodes(self, order_by="ascending"):
+        order_by = "ASC" if order_by == "ascending" else "DESC"
+        res = self.cur.execute(f"SELECT * FROM nodes ORDER BY datecreated {order_by}")
+        res = res.fetchall()
+        out = []
+        for game in res:
+            out.append({"name": game[0], "amount": float(game[1]), "id": game[2], "parent": game[3], "datecreated": float(game[4])})
+        return out
 
     # User operations
     def user_exists(self, username: str) -> bool:
@@ -41,8 +77,11 @@ class Database:
         return {"username": res[0], "password": res[1], "datecreated": res[2]}
 
     # Hash operations
-    def hash_exists(self, key: str, val: str) -> bool:
-        res = self.cur.execute(f"SELECT * FROM hashes WHERE key='{key}' AND value='{val}'")
+    def hash_exists(self, key: str, val="") -> bool:
+        if val == "":
+            res = self.cur.execute(f"SELECT * FROM hashes WHERE key='{key}'")
+        else:
+            res = self.cur.execute(f"SELECT * FROM hashes WHERE key='{key}' AND value='{val}'")
         return not (res.fetchone() is None)
 
     def create_hash(self, key: str, val: str):
@@ -66,6 +105,13 @@ class Database:
         self.cur.execute(f"DELETE FROM authkeys WHERE key='{key}'")
         self.con.commit()
 
+    def authkey(self, key: str):
+        res = self.cur.execute(f"SELECT * FROM authkeys WHERE key='{key}'")
+        res = res.fetchone()
+        if res is None:
+            return None
+        return {"key": res[0], "value": res[1]}
+
     # Game operations
     def create_game(self, creator: str, id: int, name: str, description: str, datecreated: float):
         self.cur.execute(f"INSERT INTO games VALUES('{creator}', '{id}', '{name}', '{description}', {datecreated})")
@@ -83,8 +129,11 @@ class Database:
             out.append({"creator": game[0], "id": game[1], "name": game[2], "description": game[3], "datecreated": float(game[4])})
         return out
 
-    def game_exists(self, id: str) -> bool:
-        res = self.cur.execute(f"SELECT * FROM games WHERE id='{id}'")
+    def game_exists(self, id: str, creator="") -> bool:
+        if creator == "":
+            res = self.cur.execute(f"SELECT * FROM games WHERE id='{id}'")
+        else:
+            res = self.cur.execute(f"SELECT * FROM games WHERE id='{id}' AND creator='{creator}'")
         return not (res.fetchone() is None)
 
     def game_info(self, id: str) -> Dict:
@@ -135,7 +184,8 @@ class Database:
         self.cur.execute(f"INSERT INTO nodes VALUES('{name}', {amount}, '{res[2]}', '{res[3]}', {res[4]})")
         self.con.commit()
 
-    def game_nodes(self, game_id: str, order_by="ASC"):
+    def game_nodes(self, game_id: str, order_by="ascending"):
+        order_by = "ASC" if order_by == "ascending" else "DESC"
         res = self.cur.execute(f"SELECT * FROM nodes WHERE parent='{game_id}' ORDER BY datecreated {order_by}")
         res = res.fetchall()
         out = []
