@@ -2,8 +2,9 @@ import unittest
 from sqlite import DBType, Database
 
 class TestDatabase(unittest.TestCase):
-    def setUp(self):
-        self.db = Database(DBType.MEMORY)
+    @classmethod
+    def setUpClass(cls):
+        cls.db = Database(DBType.MEMORY)
 
     def test_user_create_read_exist(self):
         self.db.create_user("hello", "world", 12345.6789)
